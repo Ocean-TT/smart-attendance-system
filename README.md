@@ -19,7 +19,7 @@
 
 git clone git@github.com:Ocean-TT/CourseDesign.git
 
-### 2. 开发新功能前：同步与创建分支
+### 2. 开发前：同步与创建分支
 
 **永远不要在 `main` 分支上直接修改代码！** 每次开发新功能前，请先同步主仓库并创建自己的分支：
 
@@ -31,9 +31,9 @@ git checkout main
 
 git pull origin main
 
-3. 创建并切换到属于你的功能分支 (分支名建议：feature/功能名)*
+3. 创建并切换到属于你的功能分支 (分支名建议：feature/模块名)*
 
-git checkout -b feature/[你的功能名]
+git checkout -b feature/模块名
 
 ### 3. 开发中：提交代码
 
@@ -43,23 +43,27 @@ git checkout -b feature/[你的功能名]
 
 git status
 
+*# 切换到已有分支*
+
+git checkout feature/模块名
+
 *# 将修改添加到暂存区*
 
 git add .
 
 *# 提交修改 (注释描述你做了什么)*
 
-git commit -m "feat: 完成了[具体功能点]的开发"
+git commit -m "注释"
 
 ### 4. 提交到远程仓库
 
 将你的本地分支推送到 GitHub，以便备份和发起合并：
 
-*# 第一次推送分支时使用 -u 参数*
+*# 每次切换分支的第一次推送时使用 -u 参数*
 
-git push -u origin feature/[你的功能名]
+git push -u origin feature/[模块名]
 
-*# 之后的推送直接使用*
+*# 只要没有切换分支，之后的推送直接使用*
 
 git push
 
