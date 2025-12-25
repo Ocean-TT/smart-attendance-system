@@ -21,33 +21,27 @@
 
 #### 1. 用户注册
 
-- **描述**: 创建一个新的用户账户（教师或学生）。
+- **描述**: 创建一个新的用户账户（教师或学生）。注册时可选上传人脸照片，系统将在注册阶段保存人脸特征以供后续考勤使用。
 
 - **请求路径**: `POST /api/auth/register`
 
-- **请求头**: `Content-Type: application/json`
+- **请求头**: 
+  - 若包含人脸图片文件: `Content-Type: multipart/form-data`
 
 - 请求参数:
-
-  ```
-  {
-    "username": "user202401",
-    "password": "a_strong_password",
-    "role": "STUDENT", // 或 "TEACHER"
-    "studentId": "20240001", // 学生必填
-    "name": "张三"
-  }
-  ```
+  - 字段: `username`, `password`, `role`, `studentId`, `name`
+  - 文件: `faceImage`
 
 - 返回响应 (成功):
 
-  ```
+  ```json
   {
     "code": 201,
     "msg": "用户创建成功",
     "data": {
       "userId": "uuid-for-zhangsan",
-      "username": "user202401"
+      "username": "user202401",
+      "faceRegistered": true
     }
   }
   ```
@@ -132,7 +126,7 @@
 
 #### 1. 创建班级
 
-- **描述**: 教师创建一个新的班级。
+- **描述**: 教师创建一个新的班级。系统同时为该教学班自动创建一个关联的题库，供后续课堂提问与题目管理使用。
 
 - **请求路径**: `POST /api/classes`
 
@@ -157,6 +151,7 @@
       "classId": "uuid-for-class",
       "name": "计算机网络 2025春季班",
       "teacherId": "uuid-for-teacher"
+      "questionBankId": "uuid-for-associated-question-bank"
     }
   }
   ```
@@ -396,26 +391,7 @@
 
 ### 四. 人脸识别考勤模块
 
-#### 1. 录入人脸信息
-
-- **描述**: 学生首次在系统中录入自己的人脸照片，作为后续识别的档案。
-- **请求路径**: `POST /api/face/register`
-- **请求头**: `Authorization: Bearer {token}`, `Content-Type: multipart/form-data`
-- 请求参数:
-  - `image` (file): 包含清晰人脸的照片文件。
-- 返回响应 (成功):
-  ```json
-  {
-    "code": 201,
-    "msg": "人脸信息录入成功",
-    "data": {
-      "userId": "uuid-for-student",
-      "faceRegistered": true
-    }
-  }
-  ```
-
-#### 2. 人脸识别签到
+#### 1. 人脸识别签到
 
 - **描述**: 在教师发起的考勤活动中，学生通过上传实时照片进行人脸识别签到。
 - **请求路径**: `POST /api/attendance/checkin/face`
@@ -435,14 +411,15 @@
     }
   }
   ```
-- 返回响应 (失败 - 人脸不匹配):
+- 返回响应 (失败 - 人脸不匹配或者未注册人脸):
   ```json
   {
     "code": 400,
-    "msg": "人脸不匹配，请重试",
+    "msg": "人脸匹配失败，请重试",
     "data": null
   }
   ```
+
 1. 教师发起考勤
 POST /api/attendance/sessions
 Authorization: Bearer {token}
@@ -494,7 +471,8 @@ Query: classId=uuid-for-class
   ```json
   {
     "classId": "uuid-for-class",
-    "strategy": "RANDOM"
+    "strategy": "RANDOM"，
+    "onlyCheckedIn": true  // 可选：若为 true 则仅从已签到学生中抽取
   }
   ```
 - 返回响应 (成功):
@@ -510,6 +488,14 @@ Query: classId=uuid-for-class
       },
       "rollCallId": "uuid-for-this-roll-call"
     }
+  }
+  ```
+  - 返回响应 (失败 - 无可选学生):
+  ```json
+  {
+    "code": 400,
+    "msg": "当前班级没有符合条件的学生可被点名",
+    "data": null
   }
   ```
 
@@ -553,6 +539,7 @@ Query: classId=uuid-for-class
     {
       "classId": "uuid-for-class",
       "questionId": "uuid-for-the-chosen-question"
+      "onlyCheckedIn": true  // 可选：是否仅从已签到学生中抽取
     }
     ```
 
