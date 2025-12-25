@@ -17,79 +17,54 @@
 - **data**: 返回数据（失败时可为 null）
 
 ---
-### 六. 课堂提问模块
+### 一. 登录/注册模块
 
-**模块描述**: 支撑教师在课堂上发起的实时提问互动。教师从题库选择问题，系统随机点名学生，并最终公布答案。
+#### 1. 用户注册
 
-#### 1. 发起课堂提问
+- **描述**: 创建一个新的用户账户（教师或学生）。
 
-- **描述**: 教师选定一个题目后，发起一次课堂提问，系统将随机点名一名学生来回答。
-- **请求路径**: `POST /api/class-questions/start`
-- **请求头**: `Authorization: Bearer {token}`
-- **请求参数**:
-  ```json
+- **请求路径**: `POST /api/auth/register`
+
+- **请求头**: `Content-Type: application/json`
+
+- 请求参数:
+
+  ```
   {
-    "classId": "uuid-for-class",
-    "questionId": "uuid-for-the-chosen-question"
+    "username": "user202401",
+    "password": "a_strong_password",
+    "role": "STUDENT", // 或 "TEACHER"
+    "studentId": "20240001", // 学生必填
+    "name": "张三"
   }
   ```
-- **返回响应 (成功)**:
-  ```json
+
+- 返回响应 (成功):
+
+  ```
   {
-    "code": 200,
-    "msg": "提问发起成功",
+    "code": 201,
+    "msg": "用户创建成功",
     "data": {
-      "questioningSessionId": "uuid-for-this-session",
-      "question": {
-        "questionId": "uuid-for-the-chosen-question",
-        "content": "在TCP/IP协议中，哪一层负责处理网络间的路由选择？"
-      },
-      "selectedStudent": {
-        "userId": "uuid-for-student-li-si",
-        "name": "李四",
-        "studentId": "20240002"
-      }
-    }
-  }
-  ```
-- **返回响应 (失败 - 题库为空或班级无学生)**:
-  ```json
-  {
-    "code": 400,
-    "msg": "无法提问，题库为空或班级没有学生",
-    "data": null
-  }
-  ```
-
-#### 2. 公布答案
-
-- **描述**: 教师在提问互动结束后，请求并向全班公布该题目的参考答案。此接口是对题库模块的读取封装，便于前端调用。
-- **请求路径**: `GET /api/questions/{questionId}`
-- **请求头**: `Authorization: Bearer {token}`
-- **请求参数**: (无，`questionId`在路径中)
-- **返回响应 (成功)**:
-  ```json
-  {
-    "code": 200,
-    "msg": "获取成功",
-    "data": {
-      "questionId": "uuid-for-the-chosen-question",
-      "content": "在TCP/IP协议中...",
-      "answer": ["C"],
-      "analysis": "网络层的主要任务是实现网络互连，进而实现数据包的路由和转发..."
+      "userId": "uuid-for-zhangsan",
+      "username": "user202401"
     }
   }
   ```
 
-**工作流程简述**:
-1. 前端调用 `GET /api/questions` 供教师从题库选题。
-2. 教师选题后，前端调用 `POST /api/class-questions/start`，后端完成点名并返回被点到的学生信息。
-3. 前端将问题和被点名学生展示给全体（可以通过 WebSocket 实时推送）。
-4. 互动结束后，前端调用 `GET /api/questions/{questionId}` 获取并展示参考答案。
+#### 2. 用户登录
 
-**注意事项**:
-- 若教师在发起提问前题库为空，前端应在选择题目阶段阻止发起并提示“题库为空，请先添加题目”。
-- 后端在 `POST /api/class-questions/start` 中需校验：题目是否存在、班级中是否有学生；校验失败应返回明确错误信息。
+- **描述**: 用户使用凭证登录系统，获取访问令牌(Token)。
+
+- **请求路径**: `POST /api/auth/login`
+
+- **请求头**: `Content-Type: application/json`
+
+- 请求参数:
+
+  ```
+  {
+    "username": "user202401",
     "password": "a_strong_password"
   }
   ```
@@ -107,7 +82,7 @@
   }
   ```
 
-#### 	3. 获取当前用户信息
+#### 3. 获取当前用户信息
 
 - **描述**: 获取当前已登录用户的详细信息。
 
@@ -119,7 +94,7 @@
 
 - 返回响应 (成功):
 
-- ```
+  ```
   {
     "code": 200,
     "msg": "获取成功",
