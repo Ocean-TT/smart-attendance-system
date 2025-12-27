@@ -420,44 +420,6 @@
   }
   ```
 
-1. 教师发起考勤
-POST /api/attendance/sessions
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "classId": "uuid-for-class",
-  "duration": 300,  // 考勤持续时间（秒），可选
-  "title": "课堂签到"  // 考勤标题，可选
-}
-响应：
-{
-  "code": 201,
-  "msg": "考勤发起成功",
-  "data": {
-    "attendanceId": "uuid-for-attendance-session",
-    "classId": "uuid-for-class",
-    "startTime": "2025-12-25T10:00:00Z",
-    "expiresAt": "2025-12-25T10:05:00Z",
-    "qrCode": "data:image/png;base64,..."  // 可选：生成二维码供学生扫码
-  }
-}
-2. 学生获取当前考勤状态
-GET /api/attendance/sessions/current
-Authorization: Bearer {token}
-Query: classId=uuid-for-class
-响应：
-{
-  "code": 200,
-  "msg": "获取成功",
-  "data": {
-    "attendanceId": "uuid-for-attendance-session",
-    "status": "ACTIVE",
-    "title": "课堂签到",
-    "remainingTime": 180  // 剩余时间（秒）
-  }
-}
-
 
 
 ### 五. 智能点名模块
