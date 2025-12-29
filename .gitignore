@@ -213,3 +213,4 @@ __marimo__/
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
+frontend/node_modules/
