@@ -9,7 +9,28 @@
 
 ------
 
-## 🚀 Git 协作流程 (核心步骤)
+## �️ 环境配置与运行指南
+
+### 1. 后端配置 (Python/FastAPI)
+1. **进入后端目录**: `cd backend`
+2. **创建虚拟环境**: `python -m venv venv`
+3. **激活虚拟环境**:
+   - Windows: `.\venv\Scripts\activate`
+   - Mac/Linux: `source venv/bin/activate`
+4. **安装依赖**: `pip install -r requirements.txt`
+   - *注意：如果安装 dlib 失败，请手动安装.whl 文件：`
+   https://github.com/z-mahmud22/Dlib_Windows_Python3.x
+5. **初始化数据库**: `python seed.py` (仅第一次运行或重置数据时使用)
+6. **启动服务**: `python main.py` (默认运行在 http://127.0.0.1:8000)
+
+### 2. 前端配置 (Vue 3/Vite)
+1. **进入前端目录**: `cd frontend`
+2. **安装依赖**: `npm install`
+3. **启动开发服务器**: `npm run dev` (默认运行在 http://localhost:5173)
+
+------
+
+## �🚀 Git 协作流程 (核心步骤)
 
 本项目采用 **功能分支 (Feature Branch) 工作流**。请严格遵守以下步骤：
 

@@ -98,6 +98,31 @@ ipython_config.py
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
+
+# --- Project Specific ---
+
+# Backend
+backend/__pycache__/
+backend/venv/
+backend/.venv/
+backend/*.db
+backend/*.sqlite3
+backend/dlib-19.24.1-cp311-cp311-win_amd64.whl
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Debug files
+debug_db.py
 #uv.lock
 
 # poetry
