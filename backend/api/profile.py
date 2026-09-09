@@ -3,14 +3,16 @@ from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from passlib.context import CryptContext
 from database.db import get_db
 from database.models import User
-from utils.response import success_response
-from utils.auth import get_current_user
+from utils.response import success_response, error_response
 from utils.face import extract_face_encoding
 import json
 
 router = APIRouter(prefix="/user", tags=["profile"])
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class ProfileUpdate(BaseModel):
     name: Optional[str] = None
@@ -44,17 +46,17 @@ async def update_profile(profile: ProfileUpdate, db: AsyncSession = Depends(get_
     if profile.department is not None:
         user.department = profile.department
     
-    db.add(user) # 确保对象被追踪
+    db.add(user)
     await db.commit()
     return success_response(msg="资料已更新")
 
 @router.post("/password/change")
 async def change_password(request: PasswordChange, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    if user.password != request.old_pwd:
-        from utils.response import error_response
+    # 校验旧密码（bcrypt）
+    if not pwd_context.verify(request.old_pwd, user.password):
         return error_response(msg="原密码错误")
     
-    user.password = request.new_pwd
+    user.password = pwd_context.hash(request.new_pwd)
     db.add(user)
     await db.commit()
     return success_response(msg="密码修改成功")
@@ -63,16 +65,12 @@ async def change_password(request: PasswordChange, db: AsyncSession = Depends(ge
 async def update_face(data: dict, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     face_data = data.get("face_data")
     if not face_data:
-        from utils.response import error_response
         return error_response(msg="未提供人脸数据")
     
-    # 提取特征并保存为 JSON 字符串
     encoding = extract_face_encoding(face_data)
     if not encoding:
-        from utils.response import error_response
         return error_response(msg="未检测到人脸，请重试")
         
     user.face_features = json.dumps(encoding)
     await db.commit()
     return success_response(msg="人脸数据已更新")
-
