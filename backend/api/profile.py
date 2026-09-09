@@ -6,6 +6,7 @@ from sqlalchemy import select
 from passlib.context import CryptContext
 from database.db import get_db
 from database.models import User
+from utils.auth import get_current_user
 from utils.response import success_response, error_response
 from utils.face import extract_face_encoding
 import json
