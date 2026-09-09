@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from .db import Base
 
-# 学生与班级的关联表
+# 学生和班级是多对多关系，需要中间表
 student_classroom = Table(
     "student_classroom",
     Base.metadata,
@@ -16,16 +16,15 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    password = Column(String)  # 实际项目中应存储哈希值
+    password = Column(String)  # 存 bcrypt 哈希，不存明文
     name = Column(String)
     role = Column(String)  # STUDENT 或 TEACHER
     student_id = Column(String, nullable=True)
     department = Column(String, nullable=True)
     email = Column(String, nullable=True)
-    face_features = Column(Text, nullable=True)  # 存储人脸特征向量的 JSON 字符串
-    points = Column(Integer, default=0)  # 积分/表现分
+    face_features = Column(Text, nullable=True)  # 人脸 128 维特征向量，存 JSON
+    points = Column(Integer, default=0)  # 课堂积分
 
-    # 关系
     classrooms = relationship("Classroom", secondary=student_classroom, back_populates="students")
 
 class QuestionBank(Base):
@@ -47,7 +46,7 @@ class Question(Base):
     bank_id = Column(Integer, ForeignKey("question_banks.id"))
     content = Column(Text)
     type = Column(String)  # SINGLE, MULTIPLE, JUDGE
-    options = Column(Text)  # JSON 字符串存储选项
+    options = Column(Text)  # 选项存 JSON 数组
     answer = Column(String)
     
     bank = relationship("QuestionBank", back_populates="questions")
@@ -64,7 +63,6 @@ class Classroom(Base):
     is_active = Column(Integer, default=0)  # 0: 未上课, 1: 正在上课
     active_call_student_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    # 关系
     students = relationship("User", secondary=student_classroom, back_populates="classrooms")
     question_bank = relationship("QuestionBank", back_populates="classroom", uselist=False)
     announcements = relationship("Announcement", back_populates="classroom")
@@ -75,7 +73,7 @@ class Announcement(Base):
     id = Column(Integer, primary_key=True, index=True)
     classroom_id = Column(Integer, ForeignKey("classrooms.id"))
     content = Column(Text)
-    date = Column(String)  # 存储日期字符串
+    date = Column(String)
 
     classroom = relationship("Classroom", back_populates="announcements")
 
@@ -106,9 +104,9 @@ class ClassroomQuestion(Base):
     classroom_id = Column(Integer, ForeignKey("classrooms.id"))
     question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
     content = Column(Text, nullable=True)
-    type = Column(String)  # BANK or MANUAL
+    type = Column(String)  # BANK 从题库抽，MANUAL 老师现场写
     answer = Column(String, nullable=True)
-    status = Column(String, default="OPEN")  # OPEN, CLOSED
+    status = Column(String, default="OPEN")
     start_time = Column(DateTime, default=datetime.now)
 
     submissions = relationship("QuestionSubmission", back_populates="question")
