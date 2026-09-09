@@ -1,18 +1,32 @@
+import os
+import base64
+import json
+from datetime import datetime, timedelta
+
+import numpy as np
+import face_recognition
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
+from passlib.context import CryptContext
+from jose import jwt
+
 from database.db import get_db
 from database.models import User
 from utils.response import success_response, error_response
 from utils.face import extract_face_encoding
-import base64
-import numpy as np
-import face_recognition
-import json
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# 密码哈希和JWT配置
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 class LoginRequest(BaseModel):
     username: str
@@ -30,13 +44,22 @@ class RegisterRequest(BaseModel):
 class FaceLoginRequest(BaseModel):
     faceData: str
 
+
+def create_access_token(data: dict):
+    """生成 JWT token"""
+    to_encode = data.copy()
+    to_encode["exp"] = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
 @router.post("/face-login")
 async def face_login(request: FaceLoginRequest, db: AsyncSession = Depends(get_db)):
+    """人脸登录：提取特征后和库里所有已注册人脸做比对"""
     encoding = extract_face_encoding(request.faceData)
     if not encoding:
         return error_response(msg="未检测到人脸或图像质量过低")
     
-    # 获取所有有脸部特征的用户
+    # 取出所有录过人脸的用户
     result = await db.execute(select(User).where(User.face_features != None))
     users = result.scalars().all()
     
@@ -44,21 +67,18 @@ async def face_login(request: FaceLoginRequest, db: AsyncSession = Depends(get_d
     
     for user in users:
         try:
-            # 尝试解析存储的特征
             features = json.loads(user.face_features)
             if not isinstance(features, list):
                 continue
             
             user_encoding = np.array(features)
-            
-            # 确保维度匹配 (face_recognition 默认是 128 维)
             if user_encoding.shape != target_encoding.shape:
                 continue
 
-            # 比对人脸
+            # tolerance 0.4 是经验值，越小越严格
             matches = face_recognition.compare_faces([user_encoding], target_encoding, tolerance=0.4)
             if matches[0]:
-                token = f"jwt-token-for-{user.username}"
+                token = create_access_token({"sub": user.username, "role": user.role})
                 return success_response(
                     data={
                         "token": token,
@@ -72,15 +92,15 @@ async def face_login(request: FaceLoginRequest, db: AsyncSession = Depends(get_d
                     msg="人脸识别成功"
                 )
         except Exception as e:
-            print(f"Error processing face features for user {user.username}: {e}")
+            print(f"人脸比对出错 {user.username}: {e}")
             continue
             
     return error_response(msg="人脸匹配失败，请使用密码登录", code=401)
 
+
 @router.post("/login")
 async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
-    # 支持用户名、学号、邮箱登录
-    from sqlalchemy import or_
+    """账号密码登录，支持用户名/学号/邮箱三种方式"""
     result = await db.execute(
         select(User).where(
             or_(
@@ -92,10 +112,10 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     )
     user = result.scalars().first()
     
-    if not user or user.password != request.password:
+    if not user or not pwd_context.verify(request.password, user.password):
         return error_response(msg="用户名或密码错误", code=401)
     
-    token = f"jwt-token-for-{user.username}"
+    token = create_access_token({"sub": user.username, "role": user.role})
     return success_response(
         data={
             "token": token,
@@ -109,14 +129,15 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
         msg="登录成功"
     )
 
+
 @router.post("/register")
 async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    # 检查用户是否已存在
+    """注册新用户，密码存哈希不存明文"""
+    # 检查用户名是否已存在
     result = await db.execute(select(User).where(User.username == request.username))
     if result.scalars().first():
         return error_response(msg="用户名已存在")
     
-    # 检查邮箱是否已存在
     if request.email:
         result = await db.execute(select(User).where(User.email == request.email))
         if result.scalars().first():
@@ -128,10 +149,9 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
         if encoding:
             face_features_json = json.dumps(encoding)
     
-    # 创建新用户
     new_user = User(
         username=request.username,
-        password=request.password,
+        password=pwd_context.hash(request.password),  # bcrypt 哈希
         name=request.name,
         role=request.role,
         student_id=request.studentId,
@@ -142,4 +162,3 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
     await db.commit()
     
     return success_response(msg="注册成功")
-
